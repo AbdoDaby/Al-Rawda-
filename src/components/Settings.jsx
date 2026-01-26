@@ -72,6 +72,31 @@ const Settings = () => {
                             placeholder="01xxxxxxxxx"
                         />
                     </div>
+
+                    <hr className="my-4 border-gray-700" style={{ margin: '1rem 0', borderColor: '#334155' }} />
+                    <h3>Telegram Notifications</h3>
+                    <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+                        Enter your Bot Token and Chat ID to receive order updates.
+                    </p>
+
+                    <div className="form-group">
+                        <label>Bot Token</label>
+                        <input
+                            type="password"
+                            value={formData.telegramBotToken || ''}
+                            onChange={e => setFormData({ ...formData, telegramBotToken: e.target.value })}
+                            placeholder="123456789:ABCdef..."
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Chat ID</label>
+                        <input
+                            type="text"
+                            value={formData.telegramChatId || ''}
+                            onChange={e => setFormData({ ...formData, telegramChatId: e.target.value })}
+                            placeholder="123456789"
+                        />
+                    </div>
                     <button type="submit" className="btn btn-primary">Save Settings</button>
 
                     {saved && <span className="success-message" style={{ marginLeft: '10px', color: '#10B981' }}>Settings Saved!</span>}

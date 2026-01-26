@@ -85,7 +85,7 @@ const POS = () => {
                     <div className="card cart-card">
                         <div className="cart-header">
                             <h3>Current Order</h3>
-                            <button className="btn-text" onClick={clearCart}>Clear</button>
+                            <button className="btn-text" onClick={clearCart}>🗑️ Clear Cart</button>
                         </div>
 
                         <div className="customer-form p-2 mb-2 border-b border-gray-700">
@@ -278,10 +278,7 @@ const POS = () => {
                     </div>
                 </div>
 
-                <div className="receipt-footer">
-                    <p>Thank you for your business!</p>
-                    <p>Please come again.</p>
-                </div>
+                {/* Footer Removed */}
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { sendTelegramMessage, formatOrderMessage, formatDeleteMessage } from '../services/telegram';
 
 const StoreContext = createContext();
 
@@ -31,7 +32,12 @@ export const StoreProvider = ({ children }) => {
 
     const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('settings');
-        return saved ? JSON.parse(saved) : { merchantName: 'Al Rawda Trading', merchantPhone: '' };
+        return saved ? JSON.parse(saved) : {
+            merchantName: 'Al Rawda Trading',
+            merchantPhone: '',
+            telegramBotToken: '',
+            telegramChatId: ''
+        };
     });
 
     const [cart, setCart] = useState([]);
@@ -203,6 +209,16 @@ export const StoreProvider = ({ children }) => {
 
         // Optimistic update
         setOrders([newOrder, ...orders]);
+
+        // Send Telegram Notification
+        if (settings.telegramBotToken && settings.telegramChatId) {
+            sendTelegramMessage(
+                settings.telegramBotToken,
+                settings.telegramChatId,
+                formatOrderMessage(newOrder)
+            );
+        }
+
         clearCart();
 
         // Save to Supabase
@@ -251,7 +267,17 @@ export const StoreProvider = ({ children }) => {
     };
 
     const deleteOrder = async (id) => {
+        const orderToDelete = orders.find(o => o.id === id);
         setOrders(orders.filter(o => o.id !== id));
+
+        // Send Telegram Notification for Deletion
+        if (orderToDelete && settings.telegramBotToken && settings.telegramChatId) {
+            sendTelegramMessage(
+                settings.telegramBotToken,
+                settings.telegramChatId,
+                formatDeleteMessage(orderToDelete)
+            );
+        }
         if (supabase) {
             const { error } = await supabase.from('orders').delete().eq('id', id);
             if (error) console.error('Error deleting order:', error);
