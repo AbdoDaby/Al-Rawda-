@@ -23,8 +23,27 @@ const POS = () => {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
 
     const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.code && p.code.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && searchTerm) {
+            // Priority 1: Exact barcode match
+            const exactMatch = products.find(p => p.code && p.code.toLowerCase() === searchTerm.toLowerCase());
+            if (exactMatch) {
+                addToCart(exactMatch);
+                setSearchTerm('');
+                return;
+            }
+
+            // Priority 2: Only one result in filtered list
+            if (filteredProducts.length === 1) {
+                addToCart(filteredProducts[0]);
+                setSearchTerm('');
+            }
+        }
+    }
 
     const { subtotal, discountAmount, total } = calculateTotal();
 
@@ -62,6 +81,7 @@ const POS = () => {
                             placeholder={t('pos.searchProducts')}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
+                            onKeyDown={handleKeyDown}
                             autoFocus
                         />
                         <div className="product-grid">

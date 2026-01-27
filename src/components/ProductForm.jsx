@@ -5,6 +5,7 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '',
+        code: '',
         price: '',
         cost: '',
         stock: '',
@@ -13,7 +14,10 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
 
     useEffect(() => {
         if (initialData) {
-            setFormData(initialData);
+            setFormData({
+                ...initialData,
+                code: initialData.code || ''
+            });
         }
     }, [initialData]);
 
@@ -26,7 +30,7 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
             cost: parseFloat(formData.cost) || 0,
             stock: parseInt(formData.stock) || 0
         });
-        setFormData({ name: '', price: '', cost: '', stock: '', description: '' });
+        setFormData({ name: '', code: '', price: '', cost: '', stock: '', description: '' });
     };
 
     return (
@@ -41,6 +45,15 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                         placeholder="e.g. Premium Dates"
                         required
+                    />
+                </div>
+                <div className="form-group">
+                    <label>{t('products.code')}</label>
+                    <input
+                        type="text"
+                        value={formData.code}
+                        onChange={e => setFormData({ ...formData, code: e.target.value })}
+                        placeholder="Barcode / SKU"
                     />
                 </div>
                 <div className="form-group">
