@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
 
 :root {
   /* Modern Vibrant Palette */
@@ -27,6 +27,7 @@
 
   --border: rgba(255, 255, 255, 0.1);
   --font-main: 'Cairo', sans-serif;
+  --font-arabic: 'Tajawal', 'Cairo', sans-serif;
 }
 
 * {
@@ -42,9 +43,57 @@ body {
     radial-gradient(circle at 10% 20%, rgba(58, 123, 213, 0.1) 0%, transparent 20%),
     radial-gradient(circle at 90% 80%, rgba(248, 7, 89, 0.05) 0%, transparent 20%);
   color: var(--text-light);
-  direction: rtl;
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+body.arabic-font {
+  font-family: var(--font-arabic);
+}
+
+body.arabic-font * {
+  font-family: var(--font-arabic) !important;
+}
+
+/* Language Switcher */
+.language-switcher {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.lang-btn {
+  flex: 1;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.8rem;
+}
+
+.lang-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.lang-btn.active {
+  background: var(--primary-gradient);
+  color: white;
+  border-color: transparent;
+}
+
+[dir='rtl'] .sidebar {
+  border-left: var(--glass-border);
+  border-right: none;
+}
+
+[dir='ltr'] .sidebar {
+  border-right: var(--glass-border);
+  border-left: none;
 }
 
 #root {
@@ -106,6 +155,14 @@ body {
   cursor: pointer;
   border-radius: 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: inherit;
+}
+
+[dir='ltr'] .nav-item {
+  text-align: left;
+}
+
+[dir='rtl'] .nav-item {
   text-align: right;
 }
 
@@ -262,8 +319,18 @@ table {
 th,
 td {
   padding: 1.2rem;
-  text-align: right;
+  text-align: inherit;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[dir='ltr'] th,
+[dir='ltr'] td {
+  text-align: left;
+}
+
+[dir='rtl'] th,
+[dir='rtl'] td {
+  text-align: right;
 }
 
 th {

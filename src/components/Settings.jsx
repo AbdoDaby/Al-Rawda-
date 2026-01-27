@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../contexts/StoreContext';
 
 const Settings = () => {
+    const { t } = useTranslation();
     const { settings, setSettings } = useStore();
     const [formData, setFormData] = useState(settings);
     const [saved, setSaved] = useState(false);
@@ -15,7 +17,6 @@ const Settings = () => {
 
     const handleSync = async () => {
         try {
-            // Need to import supabase and check connection
             const { supabase } = await import('../supabaseClient');
             if (!supabase) {
                 alert('Supabase client not configured. Please check your .env file.');
@@ -28,34 +29,28 @@ const Settings = () => {
                 return;
             }
 
-            if (window.confirm('This will upload all local products to the database. Continue?')) {
+            if (window.confirm(t('settings.syncConfirm'))) {
                 const localProducts = settings.products || JSON.parse(localStorage.getItem('products') || '[]');
-
-                // We need to clean IDs if they are timestamps (since Supabase generates IDs generally, 
-                // OR we force them. Best to let Supabase generate new IDs for migration or upsert if we track UUIDs).
-                // For simplicity: Insert and ignore ID conflict? Or remove ID?
-                // Let's remove ID so Supabase generates unique Postgres IDs.
-
                 const productsToUpload = localProducts.map(({ id, ...rest }) => rest);
 
                 const { error } = await supabase.from('products').insert(productsToUpload);
 
                 if (error) throw error;
-                alert('Products synced successfully!');
+                alert(t('settings.syncSuccess'));
             }
         } catch (err) {
             console.error(err);
-            alert('Sync failed: ' + err.message);
+            alert(t('settings.syncFail') + err.message);
         }
     };
 
     return (
         <div className="settings-page fade-in">
-            <h2>System Settings</h2>
+            <h2>{t('settings.title')}</h2>
             <div className="card">
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Merchant Name / Company Name</label>
+                        <label>{t('settings.merchantName')}</label>
                         <input
                             type="text"
                             value={formData.merchantName}
@@ -64,7 +59,7 @@ const Settings = () => {
                         />
                     </div>
                     <div className="form-group">
-                        <label>Phone Number</label>
+                        <label>{t('settings.phoneNumber')}</label>
                         <input
                             type="text"
                             value={formData.merchantPhone}
@@ -74,13 +69,13 @@ const Settings = () => {
                     </div>
 
                     <hr className="my-4 border-gray-700" style={{ margin: '1rem 0', borderColor: '#334155' }} />
-                    <h3>Telegram Notifications</h3>
+                    <h3>{t('settings.telegramTitle')}</h3>
                     <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-                        Enter your Bot Token and Chat ID to receive order updates.
+                        {t('settings.telegramDesc')}
                     </p>
 
                     <div className="form-group">
-                        <label>Bot Token</label>
+                        <label>{t('settings.botToken')}</label>
                         <input
                             type="password"
                             value={formData.telegramBotToken || ''}
@@ -89,7 +84,7 @@ const Settings = () => {
                         />
                     </div>
                     <div className="form-group">
-                        <label>Chat ID</label>
+                        <label>{t('settings.chatId')}</label>
                         <input
                             type="text"
                             value={formData.telegramChatId || ''}
@@ -97,23 +92,23 @@ const Settings = () => {
                             placeholder="123456789"
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary">Save Settings</button>
+                    <button type="submit" className="btn btn-primary">{t('settings.saveSettings')}</button>
 
-                    {saved && <span className="success-message" style={{ marginLeft: '10px', color: '#10B981' }}>Settings Saved!</span>}
+                    {saved && <span className="success-message" style={{ marginLeft: '10px', color: '#10B981' }}>{t('settings.settingsSaved')}</span>}
                 </form>
 
                 <hr style={{ margin: '2rem 0', borderColor: '#334155' }} />
 
-                <h3>Data Management</h3>
+                <h3>{t('settings.dataManagement')}</h3>
                 <p className="text-muted" style={{ marginBottom: '1rem' }}>
-                    Upload your local products to the cloud database (Supabase).
+                    {t('settings.syncDesc')}
                 </p>
                 <button
                     type="button"
                     className="btn btn-primary"
                     onClick={handleSync}
                 >
-                    ☁️ Sync Products to Cloud
+                    {t('settings.syncBtn')}
                 </button>
             </div>
         </div>

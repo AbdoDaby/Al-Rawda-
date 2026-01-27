@@ -1,21 +1,25 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
+    const { t } = useTranslation();
+
     const menuItems = [
-        { id: 'pos', icon: '🛒', label: 'Point of Sale' },
-        { id: 'orders', icon: '📜', label: 'Order History' },
-        { id: 'products', icon: '📦', label: 'Products' },
-        { id: 'analytics', icon: '📊', label: 'Sales & Profit' },
-        { id: 'settings', icon: '⚙️', label: 'Settings' },
+        { id: 'pos', icon: '🛒', label: t('sidebar.pos') },
+        { id: 'orders', icon: '📜', label: t('sidebar.orders') },
+        { id: 'products', icon: '📦', label: t('sidebar.products') },
+        { id: 'analytics', icon: '📊', label: t('sidebar.analytics') },
+        { id: 'settings', icon: '⚙️', label: t('sidebar.settings') },
     ];
 
     return (
         <aside className="sidebar">
-            <div className="logo-area">
-                <h1>Al Rawda</h1>
-                <p>Trading Company</p>
+            <div className="logoarea text-center" style={{ marginBottom: '2rem' }}>
+                <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{t('sidebar.title')}</h1>
+                <p style={{ color: 'var(--text-muted)' }}>{t('sidebar.subtitle')}</p>
             </div>
-            <nav>
+            <nav style={{ flex: 1 }}>
                 {menuItems.map(item => (
                     <button
                         key={item.id}
@@ -27,6 +31,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                     </button>
                 ))}
             </nav>
+            <LanguageSwitcher />
         </aside>
     );
 };

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../contexts/StoreContext';
 import { sendTelegramNotification } from '../services/notificationService';
 
 const POS = () => {
+    const { t } = useTranslation();
     const {
         products,
         cart,
@@ -57,14 +59,14 @@ const POS = () => {
                         <input
                             type="text"
                             className="pos-search"
-                            placeholder="🔍 Search Products..."
+                            placeholder={t('pos.searchProducts')}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             autoFocus
                         />
                         <div className="product-grid">
                             {filteredProducts.length === 0 ? (
-                                <p className="no-results">No products found.</p>
+                                <p className="no-results">{t('common.noResults')}</p>
                             ) : (
                                 filteredProducts.map(product => (
                                     <div
@@ -73,7 +75,7 @@ const POS = () => {
                                         onClick={() => addToCart(product)}
                                     >
                                         <div className="pc-name">{product.name}</div>
-                                        <div className="pc-price">{product.price.toFixed(2)} EGP</div>
+                                        <div className="pc-price">{product.price.toFixed(2)} {t('common.egp')}</div>
                                     </div>
                                 ))
                             )}
@@ -84,21 +86,21 @@ const POS = () => {
                 <div className="cart-section">
                     <div className="card cart-card">
                         <div className="cart-header">
-                            <h3>Current Order</h3>
-                            <button className="btn-text" onClick={clearCart}>🗑️ Clear Cart</button>
+                            <h3>{t('pos.currentOrder')}</h3>
+                            <button className="btn-text" onClick={clearCart}>{t('pos.clearCart')}</button>
                         </div>
 
                         <div className="customer-form p-2 mb-2 border-b border-gray-700">
                             <input
                                 type="text"
-                                placeholder="Customer Name (Optional)"
+                                placeholder={t('pos.customerName')}
                                 value={customer.name}
                                 onChange={e => setCustomer({ ...customer, name: e.target.value })}
                                 className="mb-2"
                             />
                             <input
                                 type="text"
-                                placeholder="Phone Number (Optional)"
+                                placeholder={t('pos.phoneNumber')}
                                 value={customer.phone}
                                 onChange={e => setCustomer({ ...customer, phone: e.target.value })}
                             />
@@ -108,7 +110,7 @@ const POS = () => {
                             {cart.length === 0 ? (
                                 <div className="empty-cart">
                                     <span>🛒</span>
-                                    <p>Cart is empty</p>
+                                    <p>{t('pos.cartEmpty')}</p>
                                 </div>
                             ) : (
                                 cart.map(item => (
@@ -144,14 +146,14 @@ const POS = () => {
 
                         <div className="cart-footer">
                             <div className="discount-controls mb-2">
-                                <label>Discount</label>
+                                <label>{t('pos.discount')}</label>
                                 <div className="flex gap-2">
                                     <select
                                         value={discount.type}
                                         onChange={e => setDiscount({ ...discount, type: e.target.value })}
                                         className="w-1/3"
                                     >
-                                        <option value="fixed">EGP</option>
+                                        <option value="fixed">{t('common.egp')}</option>
                                         <option value="percent">%</option>
                                     </select>
                                     <input
@@ -164,7 +166,7 @@ const POS = () => {
                             </div>
 
                             <div className="payment-method">
-                                <label className="block">Payment Method</label>
+                                <label className="block">{t('pos.paymentMethod')}</label>
                                 <div className="payment-options">
                                     <label className={`payment-option-label ${paymentMethod === 'Cash' ? 'selected' : ''}`}>
                                         <input
@@ -174,7 +176,7 @@ const POS = () => {
                                             checked={paymentMethod === 'Cash'}
                                             onChange={e => setPaymentMethod(e.target.value)}
                                         />
-                                        <span>💵 Cash</span>
+                                        <span>{t('pos.cash')}</span>
                                     </label>
                                     <label className={`payment-option-label ${paymentMethod === 'InstaPay' ? 'selected' : ''}`}>
                                         <input
@@ -184,25 +186,25 @@ const POS = () => {
                                             checked={paymentMethod === 'InstaPay'}
                                             onChange={e => setPaymentMethod(e.target.value)}
                                         />
-                                        <span>📱 InstaPay</span>
+                                        <span>{t('pos.instapay')}</span>
                                     </label>
                                 </div>
                             </div>
 
                             <div className="summary-card">
                                 <div className="summary-row">
-                                    <span>Subtotal</span>
-                                    <span>{subtotal.toFixed(2)} EGP</span>
+                                    <span>{t('pos.subtotal')}</span>
+                                    <span>{subtotal.toFixed(2)} {t('common.egp')}</span>
                                 </div>
                                 {discountAmount > 0 && (
                                     <div className="summary-row discount">
-                                        <span>Discount ({discount.type === 'percent' ? `${discount.value}%` : 'Fixed'})</span>
-                                        <span>-{discountAmount.toFixed(2)} EGP</span>
+                                        <span>{t('pos.discount')} ({discount.type === 'percent' ? `${discount.value}%` : t('common.egp')})</span>
+                                        <span>-{discountAmount.toFixed(2)} {t('common.egp')}</span>
                                     </div>
                                 )}
                                 <div className="summary-row total">
-                                    <span>Total</span>
-                                    <span>{total.toFixed(2)} EGP</span>
+                                    <span>{t('pos.total')}</span>
+                                    <span>{total.toFixed(2)} {t('common.egp')}</span>
                                 </div>
                             </div>
 
@@ -211,7 +213,7 @@ const POS = () => {
                                 disabled={cart.length === 0}
                                 onClick={handleCheckout}
                             >
-                                Checkout & Print
+                                {t('pos.checkout')}
                             </button>
                         </div>
                     </div>
@@ -221,14 +223,14 @@ const POS = () => {
             {/* Print Receipt Template */}
             <div className="print-area">
                 <div className="receipt-header">
-                    <h1>{settings.merchantName || 'Al Rawda Trading'}</h1>
+                    <h1>{settings.merchantName || t('sidebar.title')}</h1>
                     <p>{settings.merchantPhone}</p>
-                    {printCustomer.name && <h2>Customer: {printCustomer.name}</h2>}
-                    {printCustomer.phone && <p>Phone: {printCustomer.phone}</p>}
+                    {printCustomer.name && <h2>{t('pos.receipt.customer')}: {printCustomer.name}</h2>}
+                    {printCustomer.phone && <p>{t('pos.receipt.phone')}: {printCustomer.phone}</p>}
                     <hr />
                     <div className="receipt-meta">
-                        <span>Date: {new Date().toLocaleDateString()}</span>
-                        <span>Time: {new Date().toLocaleTimeString()}</span>
+                        <span>{t('pos.receipt.date')}: {new Date().toLocaleDateString()}</span>
+                        <span>{t('pos.receipt.time')}: {new Date().toLocaleTimeString()}</span>
                     </div>
                 </div>
 
@@ -236,17 +238,17 @@ const POS = () => {
                     <thead>
                         <tr>
                             <th style={{ width: '10%' }}>#</th>
-                            <th style={{ textAlign: 'right' }}>Item</th>
-                            <th style={{ width: '15%' }}>Qty</th>
-                            <th style={{ width: '20%' }}>Price</th>
-                            <th style={{ width: '20%' }}>Total</th>
+                            <th style={{ textAlign: 'inherit' }}>{t('pos.receipt.item')}</th>
+                            <th style={{ width: '15%' }}>{t('pos.receipt.qty')}</th>
+                            <th style={{ width: '20%' }}>{t('pos.receipt.price')}</th>
+                            <th style={{ width: '20%' }}>{t('pos.receipt.total')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {printItems.map((item, index) => (
                             <tr key={item.id}>
                                 <td style={{ textAlign: 'center' }}>{index + 1}</td>
-                                <td style={{ textAlign: 'right' }}>{item.name}</td>
+                                <td style={{ textAlign: 'inherit' }}>{item.name}</td>
                                 <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                                 <td style={{ textAlign: 'center' }}>{item.price.toFixed(2)}</td>
                                 <td style={{ textAlign: 'center' }}>{item.total.toFixed(2)}</td>
@@ -259,26 +261,24 @@ const POS = () => {
 
                 <div className="receipt-summary">
                     <div className="row">
-                        <span>Subtotal:</span>
-                        <span>{printSubtotal.toFixed(2)} EGP</span>
+                        <span>{t('pos.subtotal')}:</span>
+                        <span>{printSubtotal.toFixed(2)} {t('common.egp')}</span>
                     </div>
                     {printDiscountAmount > 0 && (
                         <div className="row">
-                            <span>Discount ({printDiscount.type === 'percent' ? `${printDiscount.value}%` : 'Fixed'}):</span>
-                            <span>-{printDiscountAmount.toFixed(2)} EGP</span>
+                            <span>{t('pos.discount')} ({printDiscount.type === 'percent' ? `${printDiscount.value}%` : t('common.egp')}):</span>
+                            <span>-{printDiscountAmount.toFixed(2)} {t('common.egp')}</span>
                         </div>
                     )}
                     <div className="row total">
-                        <span>Total:</span>
-                        <span>{printTotal.toFixed(2)} EGP</span>
+                        <span>{t('pos.total')}:</span>
+                        <span>{printTotal.toFixed(2)} {t('common.egp')}</span>
                     </div>
                     <div className="row" style={{ marginTop: '10px' }}>
-                        <span>Payment Method:</span>
-                        <span>{printPaymentMethod}</span>
+                        <span>{t('pos.paymentMethod')}:</span>
+                        <span>{printPaymentMethod === 'Cash' ? t('pos.cash') : t('pos.instapay')}</span>
                     </div>
                 </div>
-
-                {/* Footer Removed */}
             </div>
         </div>
     );

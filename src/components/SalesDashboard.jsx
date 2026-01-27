@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../contexts/StoreContext';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -7,6 +8,7 @@ import {
 } from 'recharts';
 
 const SalesDashboard = () => {
+    const { t } = useTranslation();
     const { orders, products } = useStore();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -32,9 +34,8 @@ const SalesDashboard = () => {
 
     // Product Performance Data
     const productStats = useMemo(() => {
-        const stats = {}; // { id: { name, sold, revenue, profit, stock, cost } }
+        const stats = {};
 
-        // Initialize with all products (to show stock even if no sales)
         products.forEach(p => {
             stats[p.id] = {
                 id: p.id,
@@ -48,20 +49,13 @@ const SalesDashboard = () => {
             };
         });
 
-        // Aggregate Sales from ALL orders (historical) for top charts? 
-        // Or just today? Requirement says "Sales Breakdown... profitable... how much sold".
-        // Usually "Stock" is global, but "Sold" is time-based.
-        // Let's show "Total Sold" (Lifetime) for better insight, or add a toggle.
-        // For now, let's aggregate ALL orders to give "Total Sold" vs "Stock Left".
-
         orders.forEach(order => {
             order.items.forEach(item => {
                 if (!stats[item.id]) {
-                    // Product might have been deleted, handle gracefully
                     stats[item.id] = {
                         id: item.id,
                         name: item.name,
-                        stock: 0, // deleted
+                        stock: 0,
                         cost: item.cost || 0,
                         price: item.price,
                         sold: 0,
@@ -79,15 +73,14 @@ const SalesDashboard = () => {
         return Object.values(stats);
     }, [orders, products]);
 
-    // Sort for Charts (Top 5 by Profit)
     const topProducts = [...productStats].sort((a, b) => b.profit - a.profit).slice(0, 5);
 
     return (
         <div className="sales-dashboard fade-in">
             <div className="dashboard-header">
-                <h2>Business Analytics</h2>
+                <h2>{t('analytics.title')}</h2>
                 <div className="date-picker-wrapper">
-                    <label>Daily View:</label>
+                    <label>{t('analytics.dailyView')}</label>
                     <input
                         type="date"
                         value={selectedDate}
@@ -97,36 +90,34 @@ const SalesDashboard = () => {
                 </div>
             </div>
 
-            {/* Metric Cards */}
             <div className="metrics-grid">
                 <div className="metric-card sales">
-                    <h3>Daily Sales</h3>
-                    <div className="value">{metrics.sales.toFixed(2)} EGP</div>
-                    <div className="subtitle">{metrics.count} Orders Today</div>
+                    <h3>{t('analytics.dailySales')}</h3>
+                    <div className="value">{metrics.sales.toFixed(2)} {t('common.egp')}</div>
+                    <div className="subtitle">{t('analytics.ordersToday', { count: metrics.count })}</div>
                 </div>
                 <div className="metric-card profit">
-                    <h3>Daily Profit</h3>
-                    <div className="value text-success">{metrics.profit.toFixed(2)} EGP</div>
-                    <div className="subtitle">Net Profit</div>
+                    <h3>{t('analytics.dailyProfit')}</h3>
+                    <div className="value text-success">{metrics.profit.toFixed(2)} {t('common.egp')}</div>
+                    <div className="subtitle">{t('analytics.netProfit')}</div>
                 </div>
                 <div className="metric-card margin">
-                    <h3>Profit Margin</h3>
+                    <h3>{t('analytics.profitMargin')}</h3>
                     <div className="value">{margin.toFixed(1)}%</div>
-                    <div className="subtitle">Of Daily Revenue</div>
+                    <div className="subtitle">{t('analytics.ofRevenue')}</div>
                 </div>
-                {/* Available Stock Value */}
                 <div className="metric-card stock">
-                    <h3>Inventory Value</h3>
+                    <h3>{t('analytics.inventoryValue')}</h3>
                     <div className="value">
-                        {products.reduce((acc, p) => acc + ((p.stock || 0) * (p.cost || 0)), 0).toFixed(2)} EGP
+                        {products.reduce((acc, p) => acc + ((p.stock || 0) * (p.cost || 0)), 0).toFixed(2)} {t('common.egp')}
                     </div>
-                    <div className="subtitle">Cost Basis</div>
+                    <div className="subtitle">{t('analytics.costBasis')}</div>
                 </div>
             </div>
 
             <div className="charts-container">
                 <div className="card">
-                    <h3>Top 5 Profitable Products (Lifetime)</h3>
+                    <h3>{t('analytics.topProducts')}</h3>
                     <div className="chart-wrapper">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={topProducts} layout="vertical" margin={{ left: 20 }}>
@@ -137,7 +128,7 @@ const SalesDashboard = () => {
                                     contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)', color: '#fff' }}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
-                                <Bar dataKey="profit" fill="url(#colorProfit)" name="Profit (EGP)" radius={[0, 4, 4, 0]} />
+                                <Bar dataKey="profit" fill="url(#colorProfit)" name={t('analytics.netProfit')} radius={[0, 4, 4, 0]} />
                                 <defs>
                                     <linearGradient id="colorProfit" x1="0" y1="0" x2="1" y2="0">
                                         <stop offset="5%" stopColor="#00E676" stopOpacity={0.8} />
@@ -150,7 +141,7 @@ const SalesDashboard = () => {
                 </div>
 
                 <div className="card">
-                    <h3>Sales Revenue Trends (Top 5)</h3>
+                    <h3>{t('analytics.salesTrends')}</h3>
                     <div className="chart-wrapper">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={topProducts}>
@@ -162,8 +153,8 @@ const SalesDashboard = () => {
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
                                 <Legend wrapperStyle={{ color: '#fff' }} />
-                                <Bar dataKey="revenue" fill="url(#colorRev)" name="Revenue" />
-                                <Bar dataKey="sold" fill="url(#colorSold)" name="Units Sold" />
+                                <Bar dataKey="revenue" fill="url(#colorRev)" name={t('analytics.revenue')} />
+                                <Bar dataKey="sold" fill="url(#colorSold)" name={t('analytics.unitsSold')} />
                                 <defs>
                                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#00D2FF" stopOpacity={0.8} />
@@ -180,21 +171,20 @@ const SalesDashboard = () => {
                 </div>
             </div>
 
-            {/* Detailed Product Table */}
             <div className="card">
-                <h3>Detailed Product Performance</h3>
+                <h3>{t('analytics.detailedPerformance')}</h3>
                 <div className="table-wrapper">
                     <table>
                         <thead>
                             <tr>
-                                <th>Product</th>
-                                <th>Cost</th>
-                                <th>Price</th>
-                                <th>Stock Left</th>
-                                <th>Units Sold</th>
-                                <th>Total Revenue</th>
-                                <th>Total Profit</th>
-                                <th>Margin/Unit</th>
+                                <th>{t('products.name')}</th>
+                                <th>{t('products.cost')}</th>
+                                <th>{t('products.price')}</th>
+                                <th>{t('products.stock')}</th>
+                                <th>{t('analytics.unitsSold')}</th>
+                                <th>{t('analytics.revenue')}</th>
+                                <th>{t('analytics.netProfit')}</th>
+                                <th>{t('analytics.profitMargin')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -202,7 +192,7 @@ const SalesDashboard = () => {
                                 <tr key={stat.id}>
                                     <td>
                                         <div className="font-bold">{stat.name}</div>
-                                        {stat.stock < 5 && <span className="badge-warning">Low Stock</span>}
+                                        {stat.stock < 5 && <span className="badge-warning">{t('products.lowStock')}</span>}
                                     </td>
                                     <td>{stat.cost.toFixed(2)}</td>
                                     <td>{stat.price.toFixed(2)}</td>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const ProductForm = ({ onSave, initialData, onCancel }) => {
+    const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '',
         price: '',
@@ -29,10 +31,10 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
 
     return (
         <div className="card product-form">
-            <h3>{initialData ? 'Edit Product' : 'Add New Product'}</h3>
+            <h3>{initialData ? t('products.editProduct') : t('products.addNew')}</h3>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label>Product Name</label>
+                    <label>{t('products.name')}</label>
                     <input
                         type="text"
                         value={formData.name}
@@ -42,7 +44,7 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Price (EGP)</label>
+                    <label>{t('products.price')}</label>
                     <input
                         type="number"
                         value={formData.price}
@@ -53,7 +55,7 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Cost Price (EGP) - Hidden from Customer</label>
+                    <label>{t('products.cost')}</label>
                     <input
                         type="number"
                         value={formData.cost}
@@ -63,7 +65,7 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Current Stock Quantity</label>
+                    <label>{t('products.stock')}</label>
                     <input
                         type="number"
                         value={formData.stock}
@@ -72,7 +74,7 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Description (Optional)</label>
+                    <label>{t('products.description')}</label>
                     <textarea
                         value={formData.description}
                         onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -82,11 +84,11 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
                 <div className="form-actions">
                     {onCancel && (
                         <button type="button" className="btn btn-secondary" onClick={onCancel}>
-                            Cancel
+                            {t('common.cancel')}
                         </button>
                     )}
                     <button type="submit" className="btn btn-primary">
-                        {initialData ? 'Update Product' : 'Add Product'}
+                        {t('common.save')}
                     </button>
                 </div>
             </form>

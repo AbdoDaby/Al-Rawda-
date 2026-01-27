@@ -1,43 +1,39 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../contexts/StoreContext';
 
 const OrderList = ({ setActiveTab }) => {
+    const { t } = useTranslation();
     const { orders, loadOrder, deleteOrder } = useStore();
 
     const handleEdit = (order) => {
-        // Confirm before overwriting current cart? 
-        // For simplicity, we just load it and switch tab.
-        if (window.confirm('Load this order into POS? Current POS cart will be replaced.')) {
+        if (window.confirm(t('orders.loadConfirm'))) {
             loadOrder(order);
             setActiveTab('pos');
         }
     };
 
     const handlePrint = (order) => {
-        // Direct printing of past orders is tricky because the print template lives in POS.
-        // A trick is to load it, print, and optionally clear.
-        // Or we can render a hidden print template here. 
-        // For MVP, "View/Edit" -> Print from POS is the workflow.
         handleEdit(order);
     };
 
     return (
         <div className="orders-page fade-in">
-            <h2>Order History</h2>
+            <h2>{t('orders.title')}</h2>
             <div className="card">
                 {orders.length === 0 ? (
-                    <p className="empty-state">No orders placed yet.</p>
+                    <p className="empty-state">{t('common.noResults')}</p>
                 ) : (
                     <div className="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Customer</th>
-                                    <th>Items</th>
-                                    <th>Payment</th>
-                                    <th>Total</th>
-                                    <th>Actions</th>
+                                    <th>{t('orders.date')}</th>
+                                    <th>{t('orders.customer')}</th>
+                                    <th>{t('orders.items')}</th>
+                                    <th>{t('orders.payment')}</th>
+                                    <th>{t('orders.total')}</th>
+                                    <th>{t('orders.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -48,28 +44,28 @@ const OrderList = ({ setActiveTab }) => {
                                             <div>{order.customer.name || '-'}</div>
                                             <small className="text-muted">{order.customer.phone}</small>
                                         </td>
-                                        <td>{order.items.length} items</td>
-                                        <td>{order.paymentMethod || 'Cash'}</td>
-                                        <td>{order.total.toFixed(2)} EGP</td>
+                                        <td>{order.items.length} {t('orders.items')}</td>
+                                        <td>{order.paymentMethod === 'Cash' ? t('pos.cash') : t('pos.instapay')}</td>
+                                        <td>{order.total.toFixed(2)} {t('common.egp')}</td>
                                         <td>
                                             <button
                                                 className="btn btn-primary btn-sm"
                                                 onClick={() => handleEdit(order)}
-                                                title="View & Edit"
+                                                title={t('orders.viewEdit')}
                                             >
-                                                👁️ View / Edit
+                                                {t('orders.viewEdit')}
                                             </button>
                                             <button
                                                 className="btn btn-primary btn-sm delete"
                                                 style={{ marginLeft: '10px', background: '#EF4444' }}
                                                 onClick={() => {
-                                                    if (window.confirm('Are you sure you want to delete this order?')) {
+                                                    if (window.confirm(t('orders.deleteConfirm'))) {
                                                         deleteOrder(order.id);
                                                     }
                                                 }}
-                                                title="Delete Order"
+                                                title={t('common.delete')}
                                             >
-                                                🗑️ Delete
+                                                {t('common.delete')}
                                             </button>
                                         </td>
                                     </tr>
