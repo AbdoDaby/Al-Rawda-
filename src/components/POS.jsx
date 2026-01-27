@@ -113,17 +113,27 @@ const POS = () => {
                         <div className="customer-form p-2 mb-2 border-b border-gray-700">
                             <input
                                 type="text"
-                                placeholder={t('pos.customerName')}
-                                value={customer.name}
-                                onChange={e => setCustomer({ ...customer, name: e.target.value })}
-                                className="mb-2"
+                                placeholder={t('products.code')}
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                className="mb-2 border-primary"
+                                style={{ borderColor: 'var(--primary-color)' }}
                             />
-                            <input
-                                type="text"
-                                placeholder={t('pos.phoneNumber')}
-                                value={customer.phone}
-                                onChange={e => setCustomer({ ...customer, phone: e.target.value })}
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder={t('pos.customerName')}
+                                    value={customer.name}
+                                    onChange={e => setCustomer({ ...customer, name: e.target.value })}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder={t('pos.phoneNumber')}
+                                    value={customer.phone}
+                                    onChange={e => setCustomer({ ...customer, phone: e.target.value })}
+                                />
+                            </div>
                         </div>
 
                         <div className="cart-items">
@@ -137,6 +147,7 @@ const POS = () => {
                                     <div key={item.id} className="cart-item">
                                         <div className="item-info">
                                             <div className="item-name">{item.name}</div>
+                                            {item.code && <div className="text-xs text-muted mb-1">{item.code}</div>}
                                             <div className="item-price-unit">{item.price.toFixed(2)} x</div>
                                         </div>
                                         <div className="item-controls">
@@ -268,7 +279,10 @@ const POS = () => {
                         {printItems.map((item, index) => (
                             <tr key={item.id}>
                                 <td style={{ textAlign: 'center' }}>{index + 1}</td>
-                                <td style={{ textAlign: 'inherit' }}>{item.name}</td>
+                                <td style={{ textAlign: 'inherit' }}>
+                                    <div>{item.name}</div>
+                                    {item.code && <small style={{ display: 'block', fontSize: '0.8em', color: '#666' }}>{item.code}</small>}
+                                </td>
                                 <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                                 <td style={{ textAlign: 'center' }}>{item.price.toFixed(2)}</td>
                                 <td style={{ textAlign: 'center' }}>{item.total.toFixed(2)}</td>
