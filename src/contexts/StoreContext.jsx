@@ -13,17 +13,43 @@ export const StoreProvider = ({ children }) => {
     // Load products from Supabase on mount
     useEffect(() => {
         const fetchProducts = async () => {
+            const loadLocalProducts = () => {
+                const saved = localStorage.getItem('products');
+                if (saved) setProducts(JSON.parse(saved));
+                return saved ? JSON.parse(saved) : [];
+            };
+
+            if (!supabase) {
+                loadLocalProducts();
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('products')
                 .select('*');
 
             if (error) {
                 console.error('Error fetching products:', error);
-                // Fallback to localStorage if Supabase fails (offline support basic)
-                const saved = localStorage.getItem('products');
-                if (saved) setProducts(JSON.parse(saved));
+                loadLocalProducts();
             } else {
-                setProducts(data || []);
+                if (data && data.length > 0) {
+                    setProducts(data);
+                } else {
+                    // Database is empty, try to migrate local products
+                    const localProducts = loadLocalProducts();
+                    if (localProducts.length > 0) {
+                        console.log('Migrating local products to Supabase...');
+                        const productsToUpload = localProducts.map(({ id, ...rest }) => rest); // Let DB handle IDs
+                        const { data: uploadedData, error: uploadError } = await supabase
+                            .from('products')
+                            .insert(productsToUpload)
+                            .select();
+
+                        if (!uploadError && uploadedData) {
+                            setProducts(uploadedData);
+                        }
+                    }
+                }
             }
         };
 
@@ -49,7 +75,9 @@ export const StoreProvider = ({ children }) => {
         const fetchOrders = async () => {
             const loadLocalOrders = () => {
                 const saved = localStorage.getItem('orders');
-                if (saved) setOrders(JSON.parse(saved));
+                const parsed = saved ? JSON.parse(saved) : [];
+                setOrders(parsed);
+                return parsed;
             };
 
             if (!supabase) {
@@ -61,13 +89,36 @@ export const StoreProvider = ({ children }) => {
                 .from('orders')
                 .select('*')
                 .order('created_at', { ascending: false })
-                .limit(50); // Limit to recent 50 orders for performance
+                .limit(50);
 
             if (error) {
                 console.error('Error fetching orders:', error);
                 loadLocalOrders();
             } else {
-                setOrders(data || []);
+                if (data && data.length > 0) {
+                    setOrders(data);
+                } else {
+                    // Database is empty, try to migrate local orders
+                    const localOrders = loadLocalOrders();
+                    if (localOrders.length > 0) {
+                        console.log('Migrating local orders to Supabase...');
+                        const ordersToUpload = localOrders.map(({ id, ...rest }) => ({
+                            ...rest,
+                            customer_info: rest.customer || rest.customer_info,
+                            discount_info: rest.discount || rest.discount_info,
+                            payment_method: rest.paymentMethod || rest.payment_method,
+                            total_amount: rest.total || rest.total_amount
+                        }));
+                        const { data: uploadedData, error: uploadError } = await supabase
+                            .from('orders')
+                            .insert(ordersToUpload)
+                            .select();
+
+                        if (!uploadError && uploadedData) {
+                            setOrders(uploadedData);
+                        }
+                    }
+                }
             }
         };
 
@@ -82,53 +133,121 @@ export const StoreProvider = ({ children }) => {
         localStorage.setItem('settings', JSON.stringify(settings));
     }, [settings]);
 
-    // Product Actions (Sync with Supabase)
     const addProduct = async (product) => {
-        const newProduct = { ...product, id: Date.now() }; // Temporary ID for UI
+        // Strip ID and created_at if they exist
+        const { id, created_at, ...productData } = product;
 
-        // Optimistic UI update
-        setProducts(prev => [...prev, newProduct]);
+        if (!supabase) {
+            const newProduct = { ...product, id: Date.now() };
+            setProducts(prev => [...prev, newProduct]);
+            const saved = JSON.parse(localStorage.getItem('products') || '[]');
+            localStorage.setItem('products', JSON.stringify([...saved, newProduct]));
+            return;
+        }
 
-        const { data, error } = await supabase
+        // --- EXPERT AUTO-RESOLVE LOGIC ---
+        // Try to insert the full product
+        let { data, error } = await supabase
             .from('products')
-            .insert([product]) // Supabase will generate ID if set to auto-increment, but we might want to send one
+            .insert([productData])
             .select();
 
+        // If it fails specifically because a column is missing (e.g., 'description')
+        if (error && error.message.includes('column') && error.message.includes('not found')) {
+            console.warn('Database schema mismatch detected. Retrying with core fields only...', error.message);
+
+            // Define core fields that MUST exist
+            const coreData = {
+                name: productData.name,
+                price: productData.price,
+                cost: productData.cost,
+                stock: productData.stock,
+                code: productData.code,
+                category: productData.category
+            };
+
+            const retry = await supabase
+                .from('products')
+                .insert([coreData])
+                .select();
+
+            data = retry.data;
+            error = retry.error;
+        }
+
         if (error) {
-            console.error('Error adding product to Supabase:', error);
-            // Revert changes optionally or show error
+            console.error('Final attempt to add product failed:', error);
+            alert(`Error: ${error.message}. Please check your Supabase schema.`);
         } else if (data) {
-            // Update with real ID from DB
-            setProducts(prev => prev.map(p => p.id === newProduct.id ? data[0] : p));
+            setProducts(prev => [...prev, data[0]]);
         }
     };
 
     const updateProduct = async (updatedProduct) => {
-        // Optimistic UI update
-        setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+        if (!supabase) {
+            const newProducts = products.map(p => p.id === updatedProduct.id ? updatedProduct : p);
+            setProducts(newProducts);
+            localStorage.setItem('products', JSON.stringify(newProducts));
+            return;
+        }
 
-        if (!supabase) return;
+        const { id, created_at, ...updateData } = updatedProduct;
 
-        const { error } = await supabase
+        // --- EXPERT AUTO-RESOLVE LOGIC ---
+        let { error } = await supabase
             .from('products')
-            .update(updatedProduct)
-            .eq('id', updatedProduct.id);
+            .update(updateData)
+            .eq('id', id);
 
-        if (error) console.error('Error updating product in Supabase:', error);
+        // If it fails specifically because a column is missing
+        if (error && error.message.includes('column') && error.message.includes('not found')) {
+            console.warn('Database schema mismatch detected during update. Retrying without extra fields...', error.message);
+
+            const coreUpdate = {
+                name: updateData.name,
+                price: updateData.price,
+                cost: updateData.cost,
+                stock: updateData.stock,
+                code: updateData.code,
+                category: updateData.category
+            };
+
+            const retry = await supabase
+                .from('products')
+                .update(coreUpdate)
+                .eq('id', id);
+
+            error = retry.error;
+        }
+
+        if (error) {
+            console.error('Error updating product in Supabase:', error);
+            alert(`Error updating product: ${error.message}`);
+        } else {
+            setProducts(products.map(p => p.id === id ? updatedProduct : p));
+        }
     };
 
     const deleteProduct = async (id) => {
-        // Optimistic UI update
-        setProducts(products.filter(p => p.id !== id));
-
-        if (!supabase) return;
+        if (!supabase) {
+            const newProducts = products.filter(p => p.id !== id);
+            setProducts(newProducts);
+            localStorage.setItem('products', JSON.stringify(newProducts));
+            return;
+        }
 
         const { error } = await supabase
             .from('products')
             .delete()
             .eq('id', id);
 
-        if (error) console.error('Error deleting product from Supabase:', error);
+        if (error) {
+            console.error('Error deleting product from Supabase:', error);
+            alert(`Error deleting product: ${error.message}`);
+        } else {
+            setProducts(products.filter(p => p.id !== id));
+            alert('Product deleted successfully from cloud!');
+        }
     };
 
     // Cart Actions (Remains Local)
@@ -204,7 +323,7 @@ export const StoreProvider = ({ children }) => {
             subtotal,
             discountAmount,
             total,
-            totalProfit // Store profit in order
+            totalProfit
         };
 
         // Optimistic update
@@ -221,40 +340,44 @@ export const StoreProvider = ({ children }) => {
 
         clearCart();
 
+        if (!supabase) {
+            localStorage.setItem('orders', JSON.stringify([newOrder, ...orders]));
+            return newOrder;
+        }
+
         // Save to Supabase
-        if (supabase) {
-            // 1. Deduct Stock in DB
-            for (const item of cart) {
-                const product = products.find(p => p.id === item.id);
-                if (product) {
-                    const newStock = Math.max(0, (product.stock || 0) - item.quantity);
-                    await supabase.from('products').update({ stock: newStock }).eq('id', product.id);
-                }
+        // 1. Deduct Stock in DB
+        for (const item of cart) {
+            const product = products.find(p => p.id === item.id);
+            if (product) {
+                const newStock = Math.max(0, (product.stock || 0) - item.quantity);
+                await supabase.from('products').update({ stock: newStock }).eq('id', product.id);
             }
+        }
 
-            // 2. Save Order
-            const { data, error } = await supabase
-                .from('orders')
-                .insert([{
-                    items: cart,
-                    customer_info: customer,
-                    discount_info: discount,
-                    payment_method: paymentMethod,
-                    subtotal,
-                    discount_amount: discountAmount,
-                    total_amount: total,
-                    total_profit: totalProfit
-                }])
-                .select();
+        // 2. Save Order
+        const { data, error } = await supabase
+            .from('orders')
+            .insert([{
+                items: cart,
+                customer_info: customer,
+                discount_info: discount,
+                payment_method: paymentMethod,
+                subtotal,
+                discount_amount: discountAmount,
+                total_amount: total,
+                total_profit: totalProfit
+            }])
+            .select();
 
-            if (error) {
-                console.error('Error saving order to Supabase:', error);
-                alert('Failed to save order to database. Please check connection.');
-            } else if (data && data[0]) {
-                const realOrder = data[0];
-                setOrders(prev => prev.map(o => o.id === newOrder.id ? { ...newOrder, id: realOrder.id, created_at: realOrder.created_at } : o));
-                return { ...newOrder, id: realOrder.id, created_at: realOrder.created_at };
-            }
+        if (error) {
+            console.error('Error saving order to Supabase:', error);
+            // Fallback to local
+            localStorage.setItem('orders', JSON.stringify([newOrder, ...orders]));
+        } else if (data && data[0]) {
+            const realOrder = data[0];
+            setOrders(prev => prev.map(o => o.id === newOrder.id ? { ...newOrder, id: realOrder.id, created_at: realOrder.created_at } : o));
+            return { ...newOrder, id: realOrder.id, created_at: realOrder.created_at };
         }
 
         return newOrder;
@@ -268,7 +391,8 @@ export const StoreProvider = ({ children }) => {
 
     const deleteOrder = async (id) => {
         const orderToDelete = orders.find(o => o.id === id);
-        setOrders(orders.filter(o => o.id !== id));
+        const newOrders = orders.filter(o => o.id !== id);
+        setOrders(newOrders);
 
         // Send Telegram Notification for Deletion
         if (orderToDelete && settings.telegramBotToken && settings.telegramChatId) {
@@ -278,9 +402,16 @@ export const StoreProvider = ({ children }) => {
                 formatDeleteMessage(orderToDelete)
             );
         }
-        if (supabase) {
-            const { error } = await supabase.from('orders').delete().eq('id', id);
-            if (error) console.error('Error deleting order:', error);
+
+        if (!supabase) {
+            localStorage.setItem('orders', JSON.stringify(newOrders));
+            return;
+        }
+
+        const { error } = await supabase.from('orders').delete().eq('id', id);
+        if (error) {
+            console.error('Error deleting order:', error);
+            localStorage.setItem('orders', JSON.stringify(newOrders));
         }
     };
 
