@@ -13,42 +13,52 @@ export const StoreProvider = ({ children }) => {
     // Load products from Supabase on mount
     useEffect(() => {
         const fetchProducts = async () => {
-            const loadLocalProducts = () => {
+            const getLocalProducts = () => {
                 const saved = localStorage.getItem('products');
-                if (saved) setProducts(JSON.parse(saved));
                 return saved ? JSON.parse(saved) : [];
             };
 
+            const localProducts = getLocalProducts();
+
             if (!supabase) {
-                loadLocalProducts();
+                setProducts(localProducts);
                 return;
             }
 
-            const { data, error } = await supabase
+            const { data: cloudProducts, error } = await supabase
                 .from('products')
                 .select('*');
 
             if (error) {
-                console.error('Error fetching products:', error);
-                loadLocalProducts();
+                console.error('Error fetching products from Supabase:', error);
+                setProducts(localProducts);
             } else {
-                if (data && data.length > 0) {
-                    setProducts(data);
-                } else {
-                    // Database is empty, try to migrate local products
-                    const localProducts = loadLocalProducts();
-                    if (localProducts.length > 0) {
-                        console.log('Migrating local products to Supabase...');
-                        const productsToUpload = localProducts.map(({ id, ...rest }) => rest); // Let DB handle IDs
-                        const { data: uploadedData, error: uploadError } = await supabase
-                            .from('products')
-                            .insert(productsToUpload)
-                            .select();
+                const currentCloud = cloudProducts || [];
+                // --- EXPERT MERGE LOGIC ---
+                // Identify local products that are NOT in the cloud yet
+                // Compare by name/code since local IDs are often temporary timestamps
+                const missingInCloud = localProducts.filter(lp =>
+                    !currentCloud.some(cp => cp.name === lp.name || (lp.code && cp.code === lp.code))
+                );
 
-                        if (!uploadError && uploadedData) {
-                            setProducts(uploadedData);
-                        }
+                if (missingInCloud.length > 0) {
+                    console.log(`Found ${missingInCloud.length} products locally not in cloud. Syncing...`);
+                    const productsToUpload = missingInCloud.map(({ id, created_at, ...rest }) => rest);
+                    const { data: uploadedData, error: uploadError } = await supabase
+                        .from('products')
+                        .insert(productsToUpload)
+                        .select();
+
+                    if (!uploadError && uploadedData) {
+                        const finalProducts = [...currentCloud, ...uploadedData];
+                        setProducts(finalProducts);
+                        localStorage.setItem('products', JSON.stringify(finalProducts));
+                    } else {
+                        setProducts([...currentCloud, ...missingInCloud]);
                     }
+                } else {
+                    setProducts(currentCloud);
+                    localStorage.setItem('products', JSON.stringify(currentCloud));
                 }
             }
         };
@@ -229,13 +239,17 @@ export const StoreProvider = ({ children }) => {
     };
 
     const deleteProduct = async (id) => {
+        // Optimistic local update to keep UI fast
+        const previousProducts = [...products];
+        const updatedProducts = products.filter(p => p.id !== id);
+        setProducts(updatedProducts);
+
         if (!supabase) {
-            const newProducts = products.filter(p => p.id !== id);
-            setProducts(newProducts);
-            localStorage.setItem('products', JSON.stringify(newProducts));
+            localStorage.setItem('products', JSON.stringify(updatedProducts));
             return;
         }
 
+        // --- EXPERT AUTO-RESOLVE LOGIC ---
         const { error } = await supabase
             .from('products')
             .delete()
@@ -243,9 +257,19 @@ export const StoreProvider = ({ children }) => {
 
         if (error) {
             console.error('Error deleting product from Supabase:', error);
-            alert(`Error deleting product: ${error.message}`);
+
+            // If it's a schema error (table/column missing), revert local and alert
+            if (error.message.includes('relation') || error.message.includes('not found')) {
+                setProducts(previousProducts);
+                alert(`Immediate Action Required: Your Supabase database tables are not ready. Please run the SQL script I provided to create the "products" table.`);
+            } else {
+                // For other errors, at least keep the local change synchronized
+                localStorage.setItem('products', JSON.stringify(updatedProducts));
+                alert(`Cloud sync issue: ${error.message}. Product was removed locally.`);
+            }
         } else {
-            setProducts(products.filter(p => p.id !== id));
+            // Success: update local cache
+            localStorage.setItem('products', JSON.stringify(updatedProducts));
             alert('Product deleted successfully from cloud!');
         }
     };
@@ -452,4 +476,3 @@ export const StoreProvider = ({ children }) => {
         </StoreContext.Provider>
     );
 };
-
