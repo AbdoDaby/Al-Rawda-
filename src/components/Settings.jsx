@@ -30,12 +30,13 @@ const Settings = () => {
             }
 
             if (window.confirm(t('settings.syncConfirm'))) {
-                const localProducts = settings.products || JSON.parse(localStorage.getItem('products') || '[]');
-                const productsToUpload = localProducts.map(({ id, ...rest }) => rest);
+                const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
 
-                const { error } = await supabase.from('products').insert(productsToUpload);
+                // Use the store's addProduct for each item to ensure robust sync and deduplication
+                for (const product of localProducts) {
+                    await addProduct(product);
+                }
 
-                if (error) throw error;
                 alert(t('settings.syncSuccess'));
             }
         } catch (err) {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { sendTelegramMessage, formatOrderMessage, formatDeleteMessage } from '../services/telegram';
+import i18n from '../i18n';
 
 const StoreContext = createContext();
 
@@ -34,28 +35,30 @@ export const StoreProvider = ({ children }) => {
                 setProducts(localProducts);
             } else {
                 const currentCloud = cloudProducts || [];
-                // --- EXPERT MERGE LOGIC ---
-                // Identify local products that are NOT in the cloud yet
-                // Compare by name/code since local IDs are often temporary timestamps
-                const missingInCloud = localProducts.filter(lp =>
-                    !currentCloud.some(cp => cp.name === lp.name || (lp.code && cp.code === lp.code))
-                );
 
-                if (missingInCloud.length > 0) {
-                    console.log(`Found ${missingInCloud.length} products locally not in cloud. Syncing...`);
-                    const productsToUpload = missingInCloud.map(({ id, created_at, ...rest }) => rest);
-                    const { data: uploadedData, error: uploadError } = await supabase
-                        .from('products')
-                        .insert(productsToUpload)
-                        .select();
+                // --- ROBUST MERGE LOGIC ---
+                // We trust Local Storage for things that haven't been synced yet
+                // But we trust Cloud for the source of truth for synced items
 
-                    if (!uploadError && uploadedData) {
-                        const finalProducts = [...currentCloud, ...uploadedData];
-                        setProducts(finalProducts);
-                        localStorage.setItem('products', JSON.stringify(finalProducts));
-                    } else {
-                        setProducts([...currentCloud, ...missingInCloud]);
-                    }
+                const cloudIds = new Set(currentCloud.map(p => String(p.id)));
+                const cloudCodes = new Set(currentCloud.map(p => p.code).filter(Boolean));
+
+                // Identify local items NOT in cloud (newly added while offline)
+                const pendingSync = localProducts.filter(lp => {
+                    // If it has a numeric ID (timestamp) instead of a BIGINT from Postgres, it's likely local-only
+                    const isNew = typeof lp.id === 'number' && lp.id > 1000000000000;
+                    const existsByCode = lp.code && cloudCodes.has(lp.code);
+                    return isNew && !existsByCode;
+                });
+
+                if (pendingSync.length > 0) {
+                    console.log(`[Sync] Found ${pendingSync.length} items pending sync.`);
+                    const finalProducts = [...currentCloud, ...pendingSync];
+                    setProducts(finalProducts);
+                    localStorage.setItem('products', JSON.stringify(finalProducts));
+
+                    // Trigger auto-sync in background
+                    pendingSync.forEach(p => addProduct(p));
                 } else {
                     setProducts(currentCloud);
                     localStorage.setItem('products', JSON.stringify(currentCloud));
@@ -144,29 +147,29 @@ export const StoreProvider = ({ children }) => {
     }, [settings]);
 
     const addProduct = async (product) => {
-        // Strip ID and created_at if they exist
         const { id, created_at, ...productData } = product;
+        const newLocalId = id || Date.now();
+        const newLocalProduct = { ...product, id: newLocalId };
 
-        if (!supabase) {
-            const newProduct = { ...product, id: Date.now() };
-            setProducts(prev => [...prev, newProduct]);
-            const saved = JSON.parse(localStorage.getItem('products') || '[]');
-            localStorage.setItem('products', JSON.stringify([...saved, newProduct]));
-            return;
-        }
+        // ALWAYS save locally first
+        setProducts(prev => {
+            const exists = prev.find(p => p.id === newLocalId || (p.code && p.code === product.code));
+            if (exists) return prev;
+            const updated = [...prev, newLocalProduct];
+            localStorage.setItem('products', JSON.stringify(updated));
+            return updated;
+        });
 
-        // --- EXPERT AUTO-RESOLVE LOGIC ---
-        // Try to insert the full product
+        if (!supabase) return;
+
+        // Save to Supabase
         let { data, error } = await supabase
             .from('products')
             .insert([productData])
             .select();
 
-        // If it fails specifically because a column is missing (e.g., 'description')
         if (error && error.message.includes('column') && error.message.includes('not found')) {
-            console.warn('Database schema mismatch detected. Retrying with core fields only...', error.message);
-
-            // Define core fields that MUST exist
+            console.warn('Database schema mismatch. Retrying with core fields...', error.message);
             const coreData = {
                 name: productData.name,
                 price: productData.price,
@@ -175,44 +178,39 @@ export const StoreProvider = ({ children }) => {
                 code: productData.code,
                 category: productData.category
             };
-
-            const retry = await supabase
-                .from('products')
-                .insert([coreData])
-                .select();
-
+            const retry = await supabase.from('products').insert([coreData]).select();
             data = retry.data;
             error = retry.error;
         }
 
         if (error) {
             console.error('Final attempt to add product failed:', error);
-            alert(`Error: ${error.message}. Please check your Supabase schema.`);
-        } else if (data) {
-            setProducts(prev => [...prev, data[0]]);
+        } else if (data && data[0]) {
+            setProducts(prev => {
+                const updated = prev.map(p =>
+                    (p.id === newLocalId || (p.code && p.code === product.code)) ? data[0] : p
+                );
+                localStorage.setItem('products', JSON.stringify(updated));
+                return updated;
+            });
         }
     };
 
     const updateProduct = async (updatedProduct) => {
-        if (!supabase) {
-            const newProducts = products.map(p => p.id === updatedProduct.id ? updatedProduct : p);
-            setProducts(newProducts);
-            localStorage.setItem('products', JSON.stringify(newProducts));
-            return;
-        }
-
         const { id, created_at, ...updateData } = updatedProduct;
 
-        // --- EXPERT AUTO-RESOLVE LOGIC ---
-        let { error } = await supabase
-            .from('products')
-            .update(updateData)
-            .eq('id', id);
+        // Update locally first
+        setProducts(prev => {
+            const updated = prev.map(p => p.id === id ? updatedProduct : p);
+            localStorage.setItem('products', JSON.stringify(updated));
+            return updated;
+        });
 
-        // If it fails specifically because a column is missing
+        if (!supabase) return;
+
+        let { error } = await supabase.from('products').update(updateData).eq('id', id);
+
         if (error && error.message.includes('column') && error.message.includes('not found')) {
-            console.warn('Database schema mismatch detected during update. Retrying without extra fields...', error.message);
-
             const coreUpdate = {
                 name: updateData.name,
                 price: updateData.price,
@@ -221,20 +219,12 @@ export const StoreProvider = ({ children }) => {
                 code: updateData.code,
                 category: updateData.category
             };
-
-            const retry = await supabase
-                .from('products')
-                .update(coreUpdate)
-                .eq('id', id);
-
+            const retry = await supabase.from('products').update(coreUpdate).eq('id', id);
             error = retry.error;
         }
 
         if (error) {
             console.error('Error updating product in Supabase:', error);
-            alert(`Error updating product: ${error.message}`);
-        } else {
-            setProducts(products.map(p => p.id === id ? updatedProduct : p));
         }
     };
 
@@ -277,6 +267,13 @@ export const StoreProvider = ({ children }) => {
     // Cart Actions (Remains Local)
     const addToCart = (product) => {
         const existing = cart.find(item => item.id === product.id);
+        const currentQty = existing ? existing.quantity : 0;
+
+        if (product.stock !== undefined && product.stock !== null && currentQty >= product.stock) {
+            alert(i18n.t('pos.insufficientStock', { name: product.name, stock: product.stock }));
+            return;
+        }
+
         if (existing) {
             setCart(cart.map(item =>
                 item.id === product.id
@@ -294,6 +291,15 @@ export const StoreProvider = ({ children }) => {
 
     const updateCartQuantity = (id, quantity) => {
         if (quantity < 1) return;
+
+        const item = cart.find(i => i.id === id);
+        const product = products.find(p => p.id === id);
+
+        if (item && product && product.stock !== undefined && product.stock !== null && quantity > product.stock) {
+            alert(i18n.t('pos.insufficientStock', { name: product.name, stock: product.stock }));
+            return;
+        }
+
         setCart(cart.map(item =>
             item.id === id
                 ? { ...item, quantity, total: quantity * item.price }

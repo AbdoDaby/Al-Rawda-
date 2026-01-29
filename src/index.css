@@ -437,8 +437,44 @@ tr:hover td {
   transition: all 0.2s;
 }
 
-.qty-btn:hover {
+.qty-btn:hover:not(:disabled) {
   background: var(--primary);
+}
+
+.qty-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.product-card-small.sold-out {
+  border-color: rgba(248, 7, 89, 0.3);
+  position: relative;
+}
+
+.product-card-small.sold-out::after {
+  content: 'SOLD OUT';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  background: var(--secondary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+[dir='rtl'] .product-card-small.sold-out::after {
+  content: 'نفذت الكمية';
+}
+
+.pc-stock {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 /* Payment Options - Visual Cards */

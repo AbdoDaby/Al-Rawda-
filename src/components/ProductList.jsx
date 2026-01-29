@@ -64,7 +64,14 @@ const ProductList = () => {
                                     {filteredProducts.map(product => (
                                         <tr key={product.id}>
                                             <td>
-                                                <div className="product-name">{product.name}</div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="product-name">{product.name}</div>
+                                                    {product.is_active === false && (
+                                                        <span className="badge badge-warning text-xs px-1 rounded bg-yellow-900 text-yellow-200">
+                                                            {t('products.hidden')}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <small className="text-muted">{product.description}</small>
                                             </td>
                                             <td><code className="bg-gray-800 px-1 rounded">{product.code || '-'}</code></td>

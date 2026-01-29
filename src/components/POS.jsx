@@ -22,10 +22,12 @@ const POS = () => {
     const [receiptData, setReceiptData] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('Cash');
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.code && p.code.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredProducts = products
+        .filter(p => p.is_active !== false)
+        .filter(p =>
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (p.code && p.code.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && searchTerm) {
@@ -91,11 +93,15 @@ const POS = () => {
                                 filteredProducts.map(product => (
                                     <div
                                         key={product.id}
-                                        className="product-card-small"
-                                        onClick={() => addToCart(product)}
+                                        className={`product-card-small ${product.stock <= 0 ? 'sold-out' : ''}`}
+                                        onClick={() => product.stock > 0 && addToCart(product)}
+                                        style={{ opacity: product.stock <= 0 ? 0.6 : 1, cursor: product.stock <= 0 ? 'not-allowed' : 'pointer' }}
                                     >
                                         <div className="pc-name">{product.name}</div>
                                         <div className="pc-price">{product.price.toFixed(2)} {t('common.egp')}</div>
+                                        <div className="pc-stock text-xs mt-1" style={{ color: product.stock <= 2 ? 'var(--accent-color)' : 'inherit' }}>
+                                            {product.stock <= 0 ? t('common.noResults') : `${t('products.stock')}: ${product.stock}`}
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -143,35 +149,42 @@ const POS = () => {
                                     <p>{t('pos.cartEmpty')}</p>
                                 </div>
                             ) : (
-                                cart.map(item => (
-                                    <div key={item.id} className="cart-item">
-                                        <div className="item-info">
-                                            <div className="item-name">{item.name}</div>
-                                            {item.code && <div className="text-xs text-muted mb-1">{item.code}</div>}
-                                            <div className="item-price-unit">{item.price.toFixed(2)} x</div>
+                                cart.map(item => {
+                                    const product = products.find(p => p.id === item.id);
+                                    const isMaxStock = product && item.quantity >= (product.stock || 0);
+
+                                    return (
+                                        <div key={item.id} className="cart-item">
+                                            <div className="item-info">
+                                                <div className="item-name">{item.name}</div>
+                                                {item.code && <div className="text-xs text-muted mb-1">{item.code}</div>}
+                                                <div className="item-price-unit">{item.price.toFixed(2)} x</div>
+                                            </div>
+                                            <div className="item-controls">
+                                                <button
+                                                    className="qty-btn"
+                                                    onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                                                    disabled={item.quantity <= 1}
+                                                >
+                                                    -
+                                                </button>
+                                                <span className="qty">{item.quantity}</span>
+                                                <button
+                                                    className="qty-btn"
+                                                    onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                                                    disabled={isMaxStock}
+                                                    title={isMaxStock ? t('pos.stockLimitReached') : ''}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                            <div className="item-total">
+                                                {item.total.toFixed(2)}
+                                                <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
+                                            </div>
                                         </div>
-                                        <div className="item-controls">
-                                            <button
-                                                className="qty-btn"
-                                                onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                                                disabled={item.quantity <= 1}
-                                            >
-                                                -
-                                            </button>
-                                            <span className="qty">{item.quantity}</span>
-                                            <button
-                                                className="qty-btn"
-                                                onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                        <div className="item-total">
-                                            {item.total.toFixed(2)}
-                                            <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
 

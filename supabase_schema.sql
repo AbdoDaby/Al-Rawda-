@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS products (
     category TEXT,
     code TEXT UNIQUE,
     image TEXT,
-    description TEXT
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
 -- Create Orders Table

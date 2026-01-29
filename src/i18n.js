@@ -54,7 +54,9 @@ i18n
                             qty: 'Qty',
                             price: 'Price',
                             total: 'Total',
-                        }
+                        },
+                        insufficientStock: 'Insufficient stock for {{name}}. Available: {{stock}}',
+                        stockLimitReached: 'Stock limit reached'
                     },
                     products: {
                         title: 'Product Management',
@@ -68,6 +70,8 @@ i18n
                         stock: 'Current Stock',
                         description: 'Description (Optional)',
                         lowStock: 'Low Stock',
+                        showInPOS: 'Show in Point of Sale',
+                        hidden: 'Hidden'
                     },
                     orders: {
                         title: 'Order History',
@@ -160,7 +164,9 @@ i18n
                             qty: 'الكمية',
                             price: 'السعر',
                             total: 'الإجمالي',
-                        }
+                        },
+                        insufficientStock: 'المخزون غير كافٍ لـ {{name}}. المتاح: {{stock}}',
+                        stockLimitReached: 'تم الوصول لجد المخزون'
                     },
                     products: {
                         title: 'إدارة المنتجات',
@@ -174,6 +180,8 @@ i18n
                         stock: 'المخزون الحالي',
                         description: 'الوصف (اختياري)',
                         lowStock: 'مخزون منخفض',
+                        showInPOS: 'عرض في نقطة البيع',
+                        hidden: 'مخفي'
                     },
                     orders: {
                         title: 'سجل الطلبات',

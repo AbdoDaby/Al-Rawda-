@@ -9,14 +9,16 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
         price: '',
         cost: '',
         stock: '',
-        description: ''
+        description: '',
+        is_active: true
     });
 
     useEffect(() => {
         if (initialData) {
             setFormData({
                 ...initialData,
-                code: initialData.code || ''
+                code: initialData.code || '',
+                is_active: initialData.is_active !== undefined ? initialData.is_active : true
             });
         }
     }, [initialData]);
@@ -28,9 +30,10 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
             ...formData,
             price: parseFloat(formData.price),
             cost: parseFloat(formData.cost) || 0,
-            stock: parseInt(formData.stock) || 0
+            stock: parseInt(formData.stock) || 0,
+            is_active: formData.is_active
         });
-        setFormData({ name: '', code: '', price: '', cost: '', stock: '', description: '' });
+        setFormData({ name: '', code: '', price: '', cost: '', stock: '', description: '', is_active: true });
     };
 
     return (
@@ -93,6 +96,16 @@ const ProductForm = ({ onSave, initialData, onCancel }) => {
                         onChange={e => setFormData({ ...formData, description: e.target.value })}
                         rows="3"
                     />
+                </div>
+                <div className="form-group checkbox-group flex items-center gap-2 mb-4">
+                    <input
+                        type="checkbox"
+                        id="is_active"
+                        checked={formData.is_active}
+                        onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+                        className="w-auto"
+                    />
+                    <label htmlFor="is_active" className="mb-0 cursor-pointer">{t('products.showInPOS')}</label>
                 </div>
                 <div className="form-actions">
                     {onCancel && (
